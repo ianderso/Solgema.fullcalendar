@@ -5,6 +5,7 @@ from datetime import datetime
 from Acquisition import aq_inner, aq_parent
 from AccessControl import getSecurityManager
 from zope.interface import implements, Interface
+from plone.event.interfaces import IEventAccessor
 from zope.component import queryAdapter, adapts, getMultiAdapter, getAdapters
 try:
     from Products.ZCatalog.interfaces import ICatalogBrain
@@ -148,8 +149,9 @@ def dict_from_events(events,
 
 
 def get_recurring_events(request, event):
-    if isinstance(event.start, datetime):
-        tz = event.start.tzinfo
+    e = IEventAccessor(event)
+    if isinstance(e.start, datetime):
+        tz = e.start.tzinfo
         start = datetime.fromtimestamp(request.get('start')).replace(tzinfo=tz)
         end = datetime.fromtimestamp(request.get('end')).replace(tzinfo=tz)
     else:
