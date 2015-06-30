@@ -1,3 +1,7 @@
+// XXX: better wrap whole JS in an anonymous function, pass jQuery and alter
+//      ``jq`` with ``$``
+if (typeof(window['jq']) == "undefined") jq = jQuery;
+
 if (!extraContentMenuActions) var extraContentMenuActions = [];
 
 function readCookie(name) {
@@ -297,13 +301,14 @@ var SolgemaFullcalendar = {
     },
     openAddMenu: function (start, end, allDay, event, view) {
       if(SolgemaFullcalendarVars.disableAJAX) { return; }
+      var url = jq('base').attr('href') + '/@@SFDisplayAddMenu';
       jq.ajax({
-        type :      'POST',
-        url :       './@@SFDisplayAddMenu',
+        type : 'POST',
+        url : url,
         dataType: "json",
-        async:   true,
-        data :      {},
-        success :   function(msg) {
+        async: true,
+        data : {},
+        success : function(msg) {
           if (msg['display']) {
             var data = new Object;
             var startMonth = start.getMonth()+1;
@@ -318,7 +323,7 @@ var SolgemaFullcalendar = {
             data['EventAllDay'] = allDay;
             openContextualContentMenu(event, this, '@@SFAddMenu', SolgemaFullcalendar.initAddContextualContentMenu, '.', data);
           } else {
-            SolgemaFullcalendar.openFastAddForm(start, end, allDay, msg['type'], msg['title'], view);
+            SolgemaFullcalendar.openFastAddForm(start, end, allDay, msg['type'], msg['is_dx'], msg['title'], view);
           }
         }
       });
@@ -366,7 +371,7 @@ var SolgemaFullcalendar = {
         jq(closeContextualContentMenu);
       });
     },
-    openFastAddForm: function (start, end, allDay, type_name, title, view) {
+    openFastAddForm: function (start, end, allDay, type_name, is_dx, title, view) {
       var data, dxdata;
       if(SolgemaFullcalendarVars.disableAJAX) { return; }
       jq('#kss-spinner').show();
@@ -389,7 +394,7 @@ var SolgemaFullcalendar = {
       target_folder = view['calendar']['options']['target_folder'];
       extraData = view['calendar']['options']['extraData'];
       if (extraData) jQuery.extend(true, data, extraData);
-      if (type_name == 'plone.app.event.dx.event') {
+      if (is_dx) {
         dxdata = new Object();
         /* whole day value, if whole day */
         if (allDay) {
@@ -412,6 +417,8 @@ var SolgemaFullcalendar = {
         dxdata['form.widgets.IEventBasic.end-year'] = end.getYear() + 1900;
         $dialogContent.append('<iframe src="'+target_folder+'/SFAjax_add_dx_event?'+jq.param(dxdata)+'" width="100%" scrolling="no" frameborder="0" name="SFEventEditIFRAME" style="overflow-x:hidden; overflow-y:hidden;"></iframe>');
       } else {
+        var timestamp = new Date().getTime().toString();
+        data['ajax_load'] = timestamp;
         $dialogContent.append('<iframe src="'+target_folder+'/createSFEvent?'+jq.param(data)+'" width="100%" scrolling="no" frameborder="0" name="SFEventEditIFRAME" style="overflow-x:hidden; overflow-y:hidden;"></iframe>');
       }
       $dialogContent.dialog({
@@ -481,7 +488,7 @@ var SolgemaFullcalendar = {
             }
           });
         });
-        jq("#contextualContentMenu a[href*='delete_confirmation']").click( function(event) {
+        jq("#contextualContentMenu a[href$='delete_confirmation']").click( function(event) {
           event.preventDefault();
           jq(closeContextualContentMenu);
           if (window.confirm(SolgemaFullcalendarVars.deleteConfirmationText)) {
@@ -504,14 +511,14 @@ var SolgemaFullcalendar = {
             });
           }
         });
-        jq("#contextualContentMenu a[href*='edit']").click( function(event) {
+        jq("#contextualContentMenu a[href$='edit']").click( function(event) {
           event.preventDefault();
           jq('#kss-spinner').show();
           var href = jq(this).attr('href');
           var eventurl = href.substring(0, href.length-5);
           SolgemaFullcalendar.openEditForm(eventurl);
         });
-        jq("#contextualContentMenu a[href*='object_cut']").click( function(event) {
+        jq("#contextualContentMenu a[href$='object_cut']").click( function(event) {
           event.preventDefault();
           jq('#kss-spinner').show();
           var href = jq(this).attr('href');
@@ -546,7 +553,7 @@ var SolgemaFullcalendar = {
           });
           jq('#kss-spinner').hide();
         });
-        jq("#contextualContentMenu a[href*='object_copy']").click( function(event) {
+        jq("#contextualContentMenu a[href$='object_copy']").click( function(event) {
           event.preventDefault();
           jq('#kss-spinner').show();
           var href = jq(this).attr('href');

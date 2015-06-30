@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import itertools
 from copy import deepcopy
 from DateTime import DateTime
@@ -10,7 +11,7 @@ from zope.component import queryAdapter, adapts, getMultiAdapter, getAdapters
 try:
     from Products.ZCatalog.interfaces import ICatalogBrain
 except:
-    ICatalogBrain = Interface
+    class ICatalogBrain(Interface): pass
 from Products.CMFCore.utils import getToolByName
 from Products.ATContentTypes.interface import IATTopic, IATFolder
 
@@ -32,6 +33,7 @@ from Products.ATContentTypes.interface import IATEvent
 try:
     from plone.event.interfaces import IEvent, IEventAccessor, IOccurrence
     from plone.event.interfaces import IEvent as IEvent_GENERIC
+    from plone.event.utils import pydt
     hasPloneAppEvent = True
 except ImportError:
     from Products.ATContentTypes.interface import IATEvent as IEvent_GENERIC
@@ -46,14 +48,14 @@ except ImportError:
 try:
     from plone.app.collection.interfaces import ICollection
 except:
-    ICollection = Interface
+    class ICollection(Interface): pass
 
 try:
     from plone.app.contenttypes.interfaces import ICollection as IDXCollection
     from plone.app.contenttypes.interfaces import IFolder
 except:
-    IDXCollection = Interface
-    IFolder = Interface
+    class IDXCollection(Interface): pass
+    class IFolder(Interface): pass
 
 
 def handle_recurrence(request):
@@ -155,8 +157,8 @@ def get_recurring_events(request, event):
         start = datetime.fromtimestamp(request.get('start')).replace(tzinfo=tz)
         end = datetime.fromtimestamp(request.get('end')).replace(tzinfo=tz)
     else:
-        start = DateTime(request.get('start'))
-        end = DateTime(request.get('end'))
+        start = pydt(DateTime(request.get('start')))
+        end = pydt(DateTime(request.get('end')))
     events = IRecurrenceSupport(event).occurrences(range_start=start,
                                                    range_end=end)
     return events
@@ -463,6 +465,7 @@ class FolderEventSource(object):
     def __init__(self, context, request):
         self.context = context
         self.request = request
+        self.portal = context.portal_url.getPortalObject()
         self.calendar = interfaces.ISolgemaFullcalendarProperties(aq_inner(context),
                                                                   None)
 
@@ -997,6 +1000,15 @@ class CollectionEventSource(TopicEventSource):
                     _args[criteriaId] = query[criteriaId]
 
         return _args, filters
+
+    def getEvents(self):
+        context = self.context
+        brains = context.queryCatalog(batch=False)
+        topicEventsDict = getMultiAdapter(
+            (context, self.request),
+            interfaces.ISolgemaFullcalendarTopicEventDict)
+        result = topicEventsDict.createDict(brains, {})
+        return result
 
 
 class DXCollectionEventSource(TopicEventSource):
