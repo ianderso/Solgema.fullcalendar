@@ -1,11 +1,43 @@
 Changelog
 =========
 
-2.3.5 (unreleased)
+3.0 (unreleased)
+----------------
+
+- Do not break sites w/o `plone.app.contenttypes` (fixes #64)
+  [fRiSi]
+
+- Remove dependency on unittest2.
+  [hvelarde]
+
+- Drop support for Python 2.6, Plone 4.0 and Plone 4.1.
+  [hvelarde]
+
+- Improve pt-br translation.
+  [tcurvelo]
+
+- Set hour format for pt-br.
+  [tcurvelo]
+
+
+2.3.6 (2016-04-05)
 ------------------
 
-- Nothing changed yet.
+- Fix missing import (from plone.app.querystring import queryparser)
+  [bsuttor]
 
+
+2.3.5 (2016-03-04)
+------------------
+
+- Add new Dexterity folder view herited from FolderView (plone.app.contenttypes.browser.folder).
+  [bsuttor]
+
+- Added generator type to check for iterable.
+  [fsprenger]
+
+- Fixed converting DX query and subfolders
+  [kroman0]
 
 2.3.4 (2014-08-08)
 ------------------

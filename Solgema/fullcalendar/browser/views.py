@@ -14,7 +14,6 @@ from zope.component.hooks import getSite
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 from plone.i18n.normalizer.interfaces import IURLNormalizer
-
 from Products.Five import BrowserView
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone import PloneLocalesMessageFactory as PLMF
@@ -23,9 +22,11 @@ from Products.CMFPlone.utils import safe_unicode
 from Products.ATContentTypes.interface import IATFolder
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection
+    from plone.app.contenttypes.browser.folder import FolderView
     COLLECTION_IS_BEHAVIOR = False
 except ImportError:
     COLLECTION_IS_BEHAVIOR = True
+    class FolderView(object): pass
 
 try:
     from plone.dexterity.interfaces import IDexterityContainer
@@ -130,9 +131,9 @@ def _get_date_from_req(request):
             return dateobj.year, dateobj.month, dateobj.day
         except ValueError:
             pass
-    year  = request.form.get('year')  or None
+    year = request.form.get('year')  or None
     month = request.form.get('month') or None
-    day   = request.form.get('day')   or None
+    day = request.form.get('day')   or None
     return year, month, day
 
 
@@ -169,6 +170,16 @@ class SolgemaFullcalendarView(BrowserView):
         return '%s/solgemafullcalendar_vars.js%s' % (base_url, query)
 
 
+class SolgemaFullcalendarDxView(FolderView, SolgemaFullcalendarView):
+    """Solgema Fullcalendar Browser view for Fullcalendar rendering."""
+
+    implements(interfaces.ISolgemaFullcalendarView)
+
+    def __init__(self, context, request):
+        super(SolgemaFullcalendarDxView, self).__init__(context, request)
+        self.calendar = interfaces.ISolgemaFullcalendarProperties(aq_inner(context), None)
+
+
 class SolgemaFullcalendarTopicView(SolgemaFullcalendarView):
     """Solgema Fullcalendar Browser view for Fullcalendar rendering"""
 
@@ -193,6 +204,7 @@ class SolgemaFullcalendarTopicView(SolgemaFullcalendarView):
         return False
 
 
+
 class SolgemaFullcalendarCollectionView(SolgemaFullcalendarView):
     """Solgema Fullcalendar Browser view for Fullcalendar rendering"""
 
@@ -210,7 +222,7 @@ class SolgemaFullcalendarCollectionView(SolgemaFullcalendarView):
         return self.request.cookies.get('sfqueryDisplay', listCriteria[0])
 
 
-class SolgemaFullcalendarDXCollectionView(SolgemaFullcalendarView):
+class SolgemaFullcalendarDXCollectionView(SolgemaFullcalendarDxView):
     """Solgema Fullcalendar Browser view for Fullcalendar rendering"""
 
     def results(self, **kwargs):
@@ -321,7 +333,7 @@ class SolgemaFullcalendarEventJS(BrowserView):
             return '{month: \'MMMM yyyy\', week: "MMM d[ yyyy]{ \'-\'[ MMM] d yyyy}", day: \'dddd, MMM d, yyyy\'}'
 
     def getHourFormat(self):
-        if self.portal_language in ['fr', 'de', 'it', 'nl']:
+        if self.portal_language in ['fr', 'de', 'it', 'nl', 'pt-br']:
             return 'HH:mm'
         else:
             return 'h(:mm)tt'
@@ -555,11 +567,11 @@ class SFTopicSources(SolgemaFullcalendarView):
                 d['type'] = 'POST'
                 d['color'] = self.getColor(criteria, value)
                 d['title'] = value
-                #d['data'] = {criteria:value} Unfortunately this is not possible to remove an eventSource with data from fullcalendar
-                #it recognises only eventSource by url....
+                # d['data'] = {criteria:value} Unfortunately this is not possible to remove an eventSource with data from fullcalendar
+                # it recognises only eventSource by url....
                 if criteria == 'Subject':
                     d['extraData'] = {'subject:list':value}
-                elif criteria in ['Creator', 'Contributor']:#How to get the right field name?
+                elif criteria in ['Creator', 'Contributor']:# How to get the right field name?
                     d['extraData'] = {criteria.lower() + 's:lines':value}
                 else:
                     d['extraData'] = {criteria:value}
@@ -616,8 +628,8 @@ class SFFolderSources(SolgemaFullcalendarView):
         voc = component.getUtility(IVocabularyFactory, name=u'solgemafullcalendar.availableSubFolders', context=self.context)(self.context)
         eventSources = []
         if values and availableSubFolders:
-            #values could come from cookie set for parent folder whereas child folder should
-            #simply show contained events. if no subfolders are available, cookie comes from parent folder
+            # values could come from cookie set for parent folder whereas child folder should
+            # simply show contained events. if no subfolders are available, cookie comes from parent folder
             for value in values:
                 if not value in availableSubFolders:
                     continue
@@ -691,7 +703,12 @@ class SolgemaFullcalendarColorsCssFolder(BrowserView):
         css = ''
         if not colorsDict or not availableSubFolders:
             return css
-        folderIds = [a.getId for a in self.context.getFolderContents(contentFilter={'object_provides':'Products.ATContentTypes.interfaces.folder.IATFolder'})]
+        folderIds = [a.getId for a in self.context.getFolderContents(contentFilter={
+            'object_provides': [
+                'Products.ATContentTypes.interfaces.folder.IATFolder',
+                'plone.dexterity.interfaces.IDexterityContainer',
+            ]
+        })]
         if not folderIds:
             return css
         fieldid = 'subFolders'
